@@ -8,24 +8,23 @@ import cv2
 def eval_genome(genome, config, namespace, game_queue, vision_queue):
     worker = Worker(genome, config, namespace, game_queue, vision_queue)
     fitness = worker.run()
+    if genome.key % 50 == 0:
+        print(f"{genome.key // 50} generations ran")
+    if fitness > namespace.max_fitness:
+        namespace.visible_genome = genome.key
+        namespace.max_fitness = fitness
+        namespace.running_best = True
+        print(fitness)
+        worker2 = Worker(genome, config, namespace, game_queue, vision_queue)
+        worker2.run()
+        namespace.running_best = False
     return fitness
 
-# def input_scanner():
-#     while True:
-#         if keyboard.is_pressed('b'):
-#             run_best()
-#             while keyboard.is_pressed('b'):
-#                 pass
-
-def draw(game_queue, vision_queue):
+def draw(game_queue):
     while True:
         if not game_queue.empty():
-            pass
-            # cv2.imshow("MARI/O", game_queue.get())
-        if not vision_queue.empty():
-            pass
-            # cv2.imshow("MARI/O Vision", vision_queue.get())
-        cv2.waitKey(1)
+            cv2.imshow("MARI/O", game_queue.get())
+            cv2.waitKey(1)
 
 def run(config_file):
     # Load configuration.
@@ -33,33 +32,25 @@ def run(config_file):
                         neat.DefaultSpeciesSet, neat.DefaultStagnation,
                         config_file)
 
-    # Create the population, which is the top-level object for a NEAT run.
-
-    # Add a stdout reporter to show progress in the terminal.
-    #p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-108')
-
-    # p.add_reporter(neat.StdOutReporter(True))
-    # stats = neat.StatisticsReporter()
-    # p.add_reporter(stats)
-    # p.add_reporter(neat.Checkpointer(10))
-
-    # IFFY DonutPlains5 Forest1 YoshiIsland2 (5000)
-    # Tested YoshiIsland2 DonutPlains1 YoshiIsland1
-
     manager = multiprocessing.Manager()
 
+    # create reporter
 
     game_queue = manager.Queue()
     vision_queue = manager.Queue()
     namespace = manager.Namespace()
+
+    namespace.visible_genome = -1
+    namespace.max_fitness = 0
+    namespace.running_best = False
     
-    draw_manager = threading.Thread(target=draw, args=(game_queue, vision_queue))
+    draw_manager = threading.Thread(target=draw, args=(game_queue,))
     draw_manager.start()
 
     while True:
         p = neat.Population(config)
 
-        pe = neat.ParallelEvaluator(int(multiprocessing.cpu_count()/2), eval_genome)
+        pe = neat.ParallelEvaluator(8, eval_genome)
 
         winner = p.run(pe.evaluate, namespace, game_queue, vision_queue)
 
