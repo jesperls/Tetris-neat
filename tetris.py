@@ -33,6 +33,7 @@ class Tetris(object):
         self.score = 0
         self.lines = 0
         self.level = 0
+        self.progress = 0
         self.ticks = 0
         self.actions = [0, 0, 0, 0, 0]
         self.board = [[(255, 255, 255)]*dimensions[0] for _ in range(dimensions[1])]
@@ -157,28 +158,28 @@ class Tetris(object):
     def run(self):
         while not self.game_over:
             self.step()
-            if self.ticks >= levels[self.level]["gravity"]:
+            if self.progress >= levels[self.level]["gravity"]:
                 cv2.imshow("Tetris", self.render())
         return(self.score)
     
     def render(self):
-        if self.ticks >= levels[self.level]["gravity"]:
+        if self.progress >= levels[self.level]["gravity"]:
             img = self.draw_board()
             self.draw_piece(img)
             img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
             img = cv2.resize(img, (dimensions[0]*16, dimensions[1]*16), interpolation = cv2.INTER_NEAREST)
             img = cv2.putText(img, f"Score: {self.score}", (0,16 ), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (125,23,33), 1)
-            cv2.waitKey(1)
             return img
 
     def step(self):
         self.handle_input()
         self.handle_actions()
-        if self.ticks >= levels[self.level]["gravity"]:
+        if self.progress >= levels[self.level]["gravity"]:
             self.stop_check()
             self.move_down()
-            self.ticks = 0
+            self.progress = 0
         self.find_line()
+        self.progress += 1
         self.ticks += 1
 
 class Tetromino(object):
@@ -199,6 +200,8 @@ class Tetromino(object):
         for block in self.blocks:
             if self.y + block[1] >= 0:
                 new_blocks.append([self.x + block[0], self.y + block[1]])
+            else:
+                new_blocks.append([self.x + block[0], 0])
         return new_blocks
 
     def rotate(self):

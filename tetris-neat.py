@@ -11,9 +11,9 @@ def eval_genome(genome, config, namespace, game_queue, vision_queue):
     if genome.key % 50 == 0:
         print(f"{genome.key // 50} generations ran")
     if fitness > namespace.max_fitness:
-        namespace.visible_genome = genome.key
         namespace.max_fitness = fitness
         namespace.running_best = True
+        namespace.visible_genome = genome.key
         print(fitness)
         worker2 = Worker(genome, config, namespace, game_queue, vision_queue)
         worker2.run()
