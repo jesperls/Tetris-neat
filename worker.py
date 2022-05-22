@@ -20,52 +20,65 @@ class Worker(object):
             self.namespace.visible_genome = self.genome.key
         self.net = neat.nn.FeedForwardNetwork.create(genome, config)
     
-    """takes in the tetris board and calculates the average height differance between columns"""
-    def get_height_diff(self, board):
-        heights = []
+    def get_info(self, board):
+        white_spaces = 0
+        blocks = 0
         for i in range(len(board[0])):
+            hit = False
             for j in range(len(board)):
                 if board[j][i] != (255, 255, 255):
-                    heights.append(j-1)
-                    break
-                if j == len(board) - 1:
-                    heights.append(j)
-        return np.std(heights), np.mean(heights)
+                    hit = True
+                    if j > 2*len(board)/3:
+                        blocks += 1
+                elif j > 2*len(board)/3:
+                    white_spaces += 1
+        return blocks, white_spaces
+    
+    def get_inputs(self):
+        inputs = []
+        for i in self.tetris.board:
+            row = []
+            for j in i:
+                if j != (255, 255, 255):
+                    row.append(1)
+                else:
+                    row.append(0)
+            inputs.extend(row)
+        for x, y in self.tetris.current_piece.get_positions():
+            inputs.append(x)
+            inputs.append(y)
+        return inputs
+
+    def visible_managers(self):
+        if self.fitness > self.namespace.max_fitness:
+            self.namespace.max_fitness = self.fitness
+            self.namespace.visible_genome = self.genome.key
+
+        if self.namespace.visible_genome == -1:
+            self.namespace.visible_genome = self.genome.key
+
+        if self.namespace.visible_genome == self.genome.key and self.tetris.ticks%120 == 0:
+            img = self.tetris.render()
+            self.game_queue.put(img)
+            cv2.waitKey(1)
 
     def run(self):
         self.tetris.reset()
         while not self.tetris.game_over:
-            if self.namespace.visible_genome == self.genome.key:
-                img = self.tetris.render()
-                if (type(img) == np.ndarray):
-                    self.game_queue.put(img)
-                    cv2.waitKey(1)
+            self.visible_managers()
 
-            if self.namespace.visible_genome == -1 and not self.namespace.running_best:
-                self.namespace.visible_genome = self.genome.key
-            
-            inputs = []
-            for i in self.tetris.board:
-                for j in i:
-                    if j != (255, 255, 255):
-                        inputs.append(1)
-                    else:
-                        inputs.append(0)
+            blocks, whitespaces = self.get_info(self.tetris.board)
 
-            for x, y in self.tetris.current_piece.get_positions():
-                inputs.append(x)
-                inputs.append(y)
-            
-            height_diffs = self.get_height_diff(self.tetris.board)
-            inputs.extend([height_diffs[0], height_diffs[1]])
-
-            actions = self.net.activate(inputs)
-
+            actions = self.net.activate(self.get_inputs())
+            if actions[-1] > 0:
+                actions[0], actions[1] = actions[1], actions[0]
+                actions[-1] = 0
             self.tetris.actions = actions
             self.tetris.step()
 
-            self.fitness =  self.tetris.score + int(self.tetris.ticks/300)
-
+            # if self.namespace.visible_genome == self.genome.key and self.tetris.ticks%60 == 0:
+            #     print(blocks - whitespaces)
+            self.fitness = self.tetris.score + blocks - whitespaces
         if self.namespace.visible_genome == self.genome.key:
             self.namespace.visible_genome = -1
 

@@ -1,14 +1,14 @@
 [NEAT]
 fitness_criterion     = max
 fitness_threshold     = 20000
-pop_size              = 50
+pop_size              = 100
 reset_on_extinction   = True
 
 [DefaultGenome]
 # node activation options
-activation_default      = clamped
-activation_mutate_rate  = 0.05
-activation_options      = relu sigmoid gauss abs clamped
+activation_default      = relu
+activation_mutate_rate  = 0.1
+activation_options      = relu sigmoid gauss abs
 
 # node aggregation options
 aggregation_default     = random
@@ -16,10 +16,10 @@ aggregation_mutate_rate = 0.05
 aggregation_options     = sum product min max mean median maxabs
 
 # node bias options
-bias_init_mean          = 0
-bias_init_stdev         = 5.0
+bias_init_mean          = 15
+bias_init_stdev         = 10
 bias_max_value          = 30.0
-bias_min_value          = -30.0
+bias_min_value          = 0
 bias_mutate_power       = 0.5
 bias_mutate_rate        = 0.2
 bias_replace_rate       = 0.1
@@ -42,39 +42,39 @@ initial_connection      = partial_nodirect 0.5
 
 # node add/remove rates
 node_add_prob           = 0.50
-node_delete_prob        = 0.2
+node_delete_prob        = 0.40
 
 # network parameters ***
 num_hidden              = 0
-num_inputs              = 230
+num_inputs              = 228
 num_outputs             = 5
 
 # node response options
-response_init_mean      = 0
-response_init_stdev     = 5.0
+response_init_mean      = 15
+response_init_stdev     = 10
 response_max_value      = 30
-response_min_value      = -30
-response_mutate_power   = 0.1
-response_mutate_rate    = 0.75
+response_min_value      = 0
+response_mutate_power   = 0.5
+response_mutate_rate    = 0.2
 response_replace_rate   = 0.1
 
 # connection weight options
-weight_init_mean        = 0
-weight_init_stdev       = 5.0
+weight_init_mean        = 15
+weight_init_stdev       = 10
 weight_max_value        = 30
-weight_min_value        = -30
+weight_min_value        = 0
 weight_mutate_power     = 0.5
 weight_mutate_rate      = 0.2
 weight_replace_rate     = 0.1
 
 [DefaultSpeciesSet]
-compatibility_threshold = 8
+compatibility_threshold = 9.5
 
 [DefaultStagnation]
-species_fitness_func = max
-max_stagnation       = 25
-species_elitism      = 0
+species_fitness_func = mean
+max_stagnation       = 7
+species_elitism      = 3
 
 [DefaultReproduction]
-elitism            = 0
+elitism            = 3
 survival_threshold = 0.3

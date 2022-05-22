@@ -8,16 +8,19 @@ import cv2
 def eval_genome(genome, config, namespace, game_queue, vision_queue):
     worker = Worker(genome, config, namespace, game_queue, vision_queue)
     fitness = worker.run()
-    if genome.key % 50 == 0:
-        print(f"{genome.key // 50} generations ran")
     if fitness > namespace.max_fitness:
         namespace.max_fitness = fitness
-        namespace.running_best = True
-        namespace.visible_genome = genome.key
-        print(fitness)
-        worker2 = Worker(genome, config, namespace, game_queue, vision_queue)
-        worker2.run()
-        namespace.running_best = False
+        print(f"New highest fitness {fitness} achieved by genome {genome.key}")
+    #     namespace.running_best = True
+    #     namespace.visible_genome = genome.key
+    #     
+    #     worker2 = Worker(genome, config, namespace, game_queue, vision_queue)
+    #     worker2.run()
+    #     if namespace.visible_genome == genome.key:
+    #         namespace.running_best = False
+    
+    # if genome.key % 100 == 0:
+    #     print(f"{genome.key // 100} generations ran, highest fitness achieved: {namespace.max_fitness}")
     return fitness
 
 def draw(game_queue):
@@ -50,11 +53,15 @@ def run(config_file):
     while True:
         p = neat.Population(config)
 
-        pe = neat.ParallelEvaluator(8, eval_genome)
+        p.add_reporter(neat.StdOutReporter(True))
+        stats = neat.StatisticsReporter()
+        p.add_reporter(stats)
+
+        pe = neat.ParallelEvaluator(16, eval_genome)
 
         winner = p.run(pe.evaluate, namespace, game_queue, vision_queue)
 
 if __name__ == '__main__':
     local_dir = os.path.dirname(__file__)
-    config_path = os.path.join(local_dir, 'config-feedforward-mario')
+    config_path = os.path.join(local_dir, 'config-feedforward')
     run(config_path)
