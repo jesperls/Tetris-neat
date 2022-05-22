@@ -24,26 +24,30 @@ class Worker(object):
         white_spaces = 0
         blocks = 0
         for i in range(len(board[0])):
-            hit = False
             for j in range(len(board)):
-                if board[j][i] != (255, 255, 255):
-                    hit = True
-                    if j > 2*len(board)/3:
-                        blocks += 1
+                if board[j][i] != (255, 255, 255) and j > 2*len(board)/3:
+                    blocks += 1
                 elif j > 2*len(board)/3:
-                    white_spaces += 1
+                    white_spaces += 0
         return blocks, white_spaces
     
     def get_inputs(self):
         inputs = []
+        left_side = 0
+        right_side = 0
         for i in self.tetris.board:
             row = []
-            for j in i:
-                if j != (255, 255, 255):
+            for j in range(len(i)):
+                if i[j] != (255, 255, 255):
+                    if j < len(i)/2:
+                        left_side += 1
+                    else:
+                        right_side += 1
                     row.append(1)
                 else:
                     row.append(0)
             inputs.extend(row)
+        inputs.extend([left_side, right_side])
         for x, y in self.tetris.current_piece.get_positions():
             inputs.append(x)
             inputs.append(y)
@@ -57,7 +61,7 @@ class Worker(object):
         if self.namespace.visible_genome == -1:
             self.namespace.visible_genome = self.genome.key
 
-        if self.namespace.visible_genome == self.genome.key and self.tetris.ticks%120 == 0:
+        if self.namespace.visible_genome == self.genome.key and self.tetris.ticks%60 == 0:
             img = self.tetris.render()
             self.game_queue.put(img)
             cv2.waitKey(1)
@@ -70,14 +74,16 @@ class Worker(object):
             blocks, whitespaces = self.get_info(self.tetris.board)
 
             actions = self.net.activate(self.get_inputs())
-            if actions[-1] > 0:
-                actions[0], actions[1] = actions[1], actions[0]
-                actions[-1] = 0
+
+            if actions[0] == 1 and actions[1] == 1:
+                actions[0], actions[1] = 0, 1
+            elif actions[1] == 0 and actions[1] == 0:
+                actions[0], actions[1] = 1, 0
+            actions.append(0)
+
             self.tetris.actions = actions
             self.tetris.step()
 
-            # if self.namespace.visible_genome == self.genome.key and self.tetris.ticks%60 == 0:
-            #     print(blocks - whitespaces)
             self.fitness = self.tetris.score + blocks - whitespaces
         if self.namespace.visible_genome == self.genome.key:
             self.namespace.visible_genome = -1

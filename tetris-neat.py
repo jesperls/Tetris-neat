@@ -8,25 +8,12 @@ import cv2
 def eval_genome(genome, config, namespace, game_queue, vision_queue):
     worker = Worker(genome, config, namespace, game_queue, vision_queue)
     fitness = worker.run()
-    if fitness > namespace.max_fitness:
-        namespace.max_fitness = fitness
-        print(f"New highest fitness {fitness} achieved by genome {genome.key}")
-    #     namespace.running_best = True
-    #     namespace.visible_genome = genome.key
-    #     
-    #     worker2 = Worker(genome, config, namespace, game_queue, vision_queue)
-    #     worker2.run()
-    #     if namespace.visible_genome == genome.key:
-    #         namespace.running_best = False
-    
-    # if genome.key % 100 == 0:
-    #     print(f"{genome.key // 100} generations ran, highest fitness achieved: {namespace.max_fitness}")
     return fitness
 
 def draw(game_queue):
     while True:
         if not game_queue.empty():
-            cv2.imshow("MARI/O", game_queue.get())
+            cv2.imshow("Tetris, but smart", game_queue.get())
             cv2.waitKey(1)
 
 def run(config_file):
@@ -36,9 +23,6 @@ def run(config_file):
                         config_file)
 
     manager = multiprocessing.Manager()
-
-    # create reporter
-
     game_queue = manager.Queue()
     vision_queue = manager.Queue()
     namespace = manager.Namespace()

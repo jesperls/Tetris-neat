@@ -15,7 +15,7 @@ tetrominos = [{"blocks": [[0, 1], [1, 1], [2, 1], [3, 1]], "color":(255, 255, 0)
               {"blocks": [[0, 0], [1, 0], [1, 1], [2, 1]], "color":(0, 0, 255), "center":(1,0), "id":6},
               {"blocks": [[0, 0], [1, 0], [1, 1], [0, 1]], "color":(0, 255, 255), "center":(0,0), "id":7}]
 
-upscaling = 16
+upscaling = 20
 
 levels = [{"gravity" : 48, "to_next":10}, {"gravity" : 43, "to_next":20}, {"gravity" : 38, "to_next":30}, 
           {"gravity" : 33, "to_next":40}, {"gravity" : 38, "to_next":50}, {"gravity" : 23, "to_next":60},
@@ -28,18 +28,16 @@ levels = [{"gravity" : 48, "to_next":10}, {"gravity" : 43, "to_next":20}, {"grav
           {"gravity" : 2, "to_next":190}, {"gravity" : 2, "to_next":200}, {"gravity" : 2, "to_next":200}, 
           {"gravity" : 2, "to_next":200}, {"gravity" : 2, "to_next":200}, {"gravity" : 1, "to_next":99999999}]
 
+board_position = {"x": 2, "y":2}
 dimensions = [10, 22]
+
+next_piece_position = {"x": 14, "y":3}
+
+screen_size = {"x": 20, "y":25}
+
 
 class Tetris(object):
     def __init__(self):
-        self.game_over = False
-        self.score = 0
-        self.lines = 0
-        self.level = 0
-        self.progress = 0
-        self.ticks = 0
-        self.actions = [0, 0, 0, 0, 0]
-        self.pressed_keys = [0, 0, 0, 0, 0]
         self.board = [[(255, 255, 255)]*dimensions[0] for _ in range(dimensions[1])]
         self.current_piece = self.get_next_piece()
         self.next_piece = self.get_next_piece()
@@ -52,7 +50,7 @@ class Tetris(object):
         self.progress = 0
         self.ticks = 0
         self.actions = [0, 0, 0, 0, 0]
-        self.pressed_keys = [0, 0, 0, 0, 0]
+        self.pressed_keys = [0, 0, 0, 0, 0, 1]
         self.board = [[(255, 255, 255)]*dimensions[0] for _ in range(dimensions[1])]
         self.current_piece = self.get_next_piece()
         self.next_piece = self.get_next_piece()
@@ -78,6 +76,8 @@ class Tetris(object):
         if keyboard.is_pressed('space') and self.pressed_keys[4] == 0:
             self.actions[4] = 1
             self.pressed_keys[4] = 1
+        if keyboard.is_pressed('r') and self.pressed_keys[5] == 0:
+            self.reset()
         if sum(self.actions) > 0:
             return True
         return False
@@ -93,68 +93,79 @@ class Tetris(object):
             self.pressed_keys[3] = 0
         if not keyboard.is_pressed('space') and self.pressed_keys[4] == 1:
             self.pressed_keys[4] = 0
+        if not keyboard.is_pressed('r') and self.pressed_keys[5] == 1:
+            self.pressed_keys[5] = 0
 
     def handle_actions(self):
         if self.actions[0] > 0:
-            self.move_right()
+            self.move_right(self.current_piece)
             self.actions[0] = 0
         if self.actions[1] > 0:
-            self.move_left()
+            self.move_left(self.current_piece)
             self.actions[1] = 0
         if self.actions[2] > 0:
-            self.move_down()
+            self.move_down(self.current_piece)
             self.actions[2] = 0
         if self.actions[3] > 0:
-            self.rotate()
+            self.rotate(self.current_piece)
             self.actions[3] = 0
         if self.actions[4] > 0:
-            self.drop_down()
+            self.drop_down(self.current_piece)
             self.actions[4] = 0
 
     def get_next_piece(self):
         selected = random.choice(tetrominos)
-        # selected = tetrominos[4]
         tetromino = Tetromino(selected["blocks"], selected["color"], selected["center"], selected["id"])
         for x, y in tetromino.get_positions():
             if self.board[y][x] != (255, 255, 255):
                 self.game_over = True
         return tetromino
     
-    def move_check(self):
-        for x, y in self.current_piece.get_positions():
-            if x < 0 or x >= dimensions[0] or y >= dimensions[1] or self.board[y][x] != (255, 255, 255):
+    def move_check(self, piece):
+        for x, y in piece.get_positions():
+            if x < 0 or x >= dimensions[0] or y >= dimensions[1] or (self.board[y][x] != (255, 255, 255) and self.board[y][x] != (210, 210, 210)):
                 return True
         return False
 
-    def stop_check(self):
-        blocks = self.current_piece.get_positions()
+    def stop_check(self, piece):
+        blocks = piece.get_positions()
         for x1, y1 in blocks:
-            if y1 >= dimensions[1]-1 or self.board[y1+1][x1] != (255, 255, 255):
+            if( y1 >= dimensions[1]-1 or self.board[y1+1][x1] != (255, 255, 255)) and piece.color != (210, 210, 210):
                 for x2, y2 in blocks:
-                    self.board[y2][x2] = self.current_piece.color
+                    self.board[y2][x2] = piece.color
                 self.current_piece = self.next_piece
                 self.next_piece = self.get_next_piece()
                 return False
         return True
 
     def draw_board(self):
-        img = np.zeros((dimensions[1], dimensions[0], 3), dtype=np.uint8)
-        for y in range(0, dimensions[1]):
-            for x in range(0, dimensions[0]):
-                img[y, x] = self.board[y][x]
+        img = np.full((screen_size["y"], screen_size["x"], 3), (125, 125, 125), dtype=np.uint8)
+        for y in range(board_position["y"], dimensions[1] + board_position["y"]):
+            for x in range(board_position["x"], dimensions[0] + board_position["x"]):
+                img[y, x] = self.board[y-board_position["y"]][x-board_position["x"]]
         return img
 
     def draw_grid(self, img):
-        for i in range(0, dimensions[1]*upscaling):
-            for j in range(0, dimensions[0]*upscaling):
+        for i in range(board_position["y"]*upscaling, dimensions[1]*upscaling + board_position["y"]*upscaling+1):
+            for j in range(board_position["x"]*upscaling, dimensions[0]*upscaling + board_position["x"]*upscaling+1):
                 if i % upscaling == 0:
                     img[i, j] = (0, 0, 0)
                 elif j % upscaling == 0:
                     img[i, j] = (0, 0, 0)
 
-    def draw_piece(self, img):
-        for x, y in self.current_piece.get_positions():
-            img[y, x] = self.current_piece.color
+    def draw_piece(self, img, piece):
+        for x, y in piece.get_positions():
+            img[y+board_position["y"], x+board_position["x"]] = piece.color
+
+    def draw_next_piece(self, img, piece):
+        for x, y in piece.get_positions():
+            img[y+ next_piece_position["y"], x+ next_piece_position["x"] - piece.x] = piece.color
+
+    def get_projection(self, piece):
+        projection = Tetromino(piece.blocks, (210, 210, 210), piece.center, piece.id)
+        projection.x, projection.y = piece.x, piece.y
+        self.drop_down(projection)
+        return projection
 
     def find_line(self):
         lines = 0
@@ -176,32 +187,32 @@ class Tetris(object):
         elif lines == 4:
             self.score += 1200*(self.level+1)
 
-    def move_piece(self, dx, dy):
-        self.current_piece.move(dx, dy)
-        if self.move_check():
-            self.current_piece.move(-dx, -dy)
+    def move_piece(self, piece, dx, dy):
+        piece.move(dx, dy)
+        if self.move_check(piece):
+            piece.move(-dx, -dy)
             return False
         return True
 
-    def move_down(self):
-        return self.move_piece(0, 1)
+    def move_down(self, piece):
+        return self.move_piece(piece, 0, 1)
     
-    def move_left(self):
-        self.move_piece(-1, 0)
+    def move_left(self, piece):
+        self.move_piece(piece, -1, 0)
     
-    def move_right(self):
-        self.move_piece(1, 0)
+    def move_right(self, piece):
+        self.move_piece(piece, 1, 0)
 
-    def drop_down(self):
-        while self.move_down():
-            if not self.stop_check():
+    def drop_down(self, piece):
+        while self.move_down(piece):
+            if not self.stop_check(piece):
                 break
     
-    def rotate(self):
-        old_blocks = self.current_piece.blocks
-        self.current_piece.rotate()
-        if self.move_check():
-            self.current_piece.blocks = old_blocks
+    def rotate(self, piece):
+        old_blocks = piece.blocks
+        piece.rotate()
+        if self.move_check(piece):
+            piece.blocks = old_blocks
 
     def run(self):
         timer = fpstimer.FPSTimer(60)
@@ -211,23 +222,23 @@ class Tetris(object):
             cv2.imshow("Tetris", self.render()), cv2.waitKey(1)
             timer.sleep()
         return(self.score)
-    
+
     def render(self):
-        # if self.progress >= levels[self.level]["gravity"] or force_render:
         img = self.draw_board()
-        self.draw_piece(img)
-        # img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)
-        img = cv2.resize(img, (dimensions[0]*upscaling, dimensions[1]*upscaling), interpolation = cv2.INTER_NEAREST)
+        self.draw_piece(img, self.get_projection(self.current_piece))
+        self.draw_piece(img, self.current_piece)
+        self.draw_next_piece(img, self.next_piece)
+        img = cv2.resize(img, (screen_size["x"]*upscaling, screen_size["y"]*upscaling), interpolation = cv2.INTER_NEAREST)
         self.draw_grid(img)
-        img = cv2.putText(img, f"Score: {self.score}", (0,upscaling ), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (125,23,33), 1)
-        img = cv2.putText(img, f"Level: {self.level}", (0,upscaling*2 ), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (125,23,33), 1)
+        img = cv2.putText(img, f"Score: {self.score}", (0,upscaling ), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
+        img = cv2.putText(img, f"Level: {self.level}", (0,upscaling*2 ), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
         return img
 
     def step(self):
         self.handle_actions()
         if self.progress >= levels[self.level]["gravity"]:
-            self.stop_check()
-            self.move_down()
+            self.stop_check(self.current_piece)
+            self.move_down(self.current_piece)
             self.progress = 0
         self.find_line()
         self.progress += 1
@@ -241,7 +252,6 @@ class Tetromino(object):
         self.center = center
         self.blocks = blocks
         self.id = id
-        # self.move(1, 0)
     
     def move(self, dx, dy):
         self.x += dx
@@ -256,7 +266,6 @@ class Tetromino(object):
                 new_blocks.append([self.x + block[0], 0])
         return new_blocks
 
-    """rotates all blocks clockwise around the center"""
     def rotate(self):
         if self.color == (0, 255, 255):
             return
